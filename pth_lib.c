@@ -30,9 +30,6 @@
 #include "pth_p.h"
 
 /* Murray added begin */
-intern int          pth_edfload;    /* edf scheduler load value */
-intern int          pth_keyload;    /* key tasks of edf scheduler load value */
-
 extern void pth_tick_scheduler(int sig);
 /* Murray added end */
 
@@ -61,37 +58,6 @@ static void pth_ex_terminate(ex_t *ex)
     pth_exit(ex->ex_value);
 }
 #endif
-
-
-/* add pth_edfload and pth_keyload. 
- * if task_load + pth_keyload > 1000, return false. */
-intern int pth_add_load(float task_load, int is_key)
-{
-    int tmp_load = (int)(task_load * 1000);
-
-    if (is_key && (tmp_load + pth_keyload > 1000))
-        return -1;
-
-    __sync_add_and_fetch(&pth_edfload, tmp_load);
-    if (is_key)
-        __sync_add_and_fetch(&pth_keyload, tmp_load);
-
-    return 0;
-}
-
-#define pth_get_edfload()   (float)(pth_edfload / 1000)
-
-#define pth_get_keyload()   (float)(pth_keyload / 1000)
-
-intern void pth_sub_load(float task_load, int is_key)
-{
-    int tmp_load = (int)(task_load * 1000);
-
-    __sync_sub_and_fetch(&pth_edfload, tmp_load);
-    if (is_key)
-        __sync_sub_and_fetch(&pth_keyload, tmp_load);
-
-}
 
 /* initialize the package */
 int pth_init(void)
@@ -330,6 +296,7 @@ pth_t pth_spawn(pth_attr_t attr, void *(*func)(void *), void *arg)
             if (pth_add_load(tmp_load, attr->a_type & HARDRT)) {
                 pth_debug5("pth_spawn:reject the task:[%s] for overload!scheduler overload:[%f], keyload:[%f], task:[%f]", \
                         attr->a_name, pth_get_edfload(), pth_get_keyload(), tmp_load);
+                pth_sub_load(tmp_load, attr->a_type & HARDRT);
                 return pth_error((pth_t)NULL, EINVAL);
             }
             pth_debug4("pth_spawn: accecp the rt task:[%s]. C=[%.6f], P=[%.6f].", \
@@ -753,6 +720,7 @@ int pth_mod_main_attr(pth_attr_t attr)
         tmp_load = 0.0;
         tmp_load = (float)(pth_time_t2d(&attr->a_exetime) / pth_time_t2d(&attr->a_period));
         if (pth_add_load(tmp_load, pth_main->flag & PTH_TASK_HARD)) {
+            pth_sub_load(tmp_load, pth_main->flag & PTH_TASK_HARD);
             pth_debug3("main thread has been reject by edfload manager! edfload:[%f], keyload:[%f]\n", \
                     pth_get_edfload(), pth_get_keyload());
             return pth_error(FALSE, EINVAL);

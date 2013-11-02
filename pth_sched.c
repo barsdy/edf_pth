@@ -50,6 +50,9 @@ static pth_time_t   pth_tick_sched_time;    /* murray added */
 static int          pth_ticks;          /* murray added. */
 static int          pth_sched_working;  /* murray added. flag the scheduler is working now */
 
+intern int          pth_edfload;    /* edf scheduler load value */
+intern int          pth_keyload;    /* key tasks of edf scheduler load value */
+
 /* initialize the scheduler ingredients */
 intern int pth_scheduler_init(void)
 {
@@ -88,27 +91,27 @@ intern void pth_scheduler_drop(void)
     pth_t t;
 
     /* clear the new queue */
-    while ((t = pth_pqueue_delmax(&pth_NQ)) != NULL)
+    while ((t = pth_pqueue_delmax(&pth_NQ, pth_get_edfload())) != NULL)
         pth_tcb_free(t);
     pth_pqueue_init(&pth_NQ);
 
     /* clear the ready queue */
-    while ((t = pth_pqueue_delmax(&pth_RQ)) != NULL)
+    while ((t = pth_pqueue_delmax(&pth_RQ, pth_get_edfload())) != NULL)
         pth_tcb_free(t);
     pth_pqueue_init(&pth_RQ);
 
     /* clear the waiting queue */
-    while ((t = pth_pqueue_delmax(&pth_WQ)) != NULL)
+    while ((t = pth_pqueue_delmax(&pth_WQ, pth_get_edfload())) != NULL)
         pth_tcb_free(t);
     pth_pqueue_init(&pth_WQ);
 
     /* clear the suspend queue */
-    while ((t = pth_pqueue_delmax(&pth_SQ)) != NULL)
+    while ((t = pth_pqueue_delmax(&pth_SQ, pth_get_edfload())) != NULL)
         pth_tcb_free(t);
     pth_pqueue_init(&pth_SQ);
 
     /* clear the dead queue */
-    while ((t = pth_pqueue_delmax(&pth_DQ)) != NULL)
+    while ((t = pth_pqueue_delmax(&pth_DQ, pth_get_edfload())) != NULL)
         pth_tcb_free(t);
     pth_pqueue_init(&pth_DQ);
     return;
@@ -265,7 +268,7 @@ intern void *pth_scheduler(void *dummy)
          * Find next thread in ready queue
         pth_pqueue_flash(&pth_RQ, &snapshot);
          */
-        pth_current = pth_pqueue_delmax(&pth_RQ);
+        pth_current = pth_pqueue_delmax(&pth_RQ, pth_get_edfload());
         if (pth_current == NULL) {
             fprintf(stderr, "**Pth** SCHEDULER INTERNAL ERROR: "
                     "no more thread(s) available to schedule!?!?\n");
@@ -994,5 +997,41 @@ intern void pth_sched_eventmanager_sighandler(int sig)
     c = (int)sig;
     pth_sc(write)(pth_sigpipe[1], &c, sizeof(char));
     return;
+}
+
+/* add pth_edfload and pth_keyload. 
+ * if task_load + pth_keyload > 1000, return false. */
+intern int pth_add_load(float task_load, int is_key)
+{
+    int tmp_load = (int)(task_load * 1000);
+
+    if (is_key && (tmp_load + pth_keyload > 1000))
+        return -1;
+
+    __sync_add_and_fetch(&pth_edfload, tmp_load);
+    if (is_key)
+        __sync_add_and_fetch(&pth_keyload, tmp_load);
+
+    return 0;
+}
+
+intern float pth_get_edfload(void)
+{
+    return (float)(pth_edfload / 1000);
+}
+
+intern float pth_get_keyload(void)
+{
+    return (float)(pth_keyload / 1000);
+}
+
+intern void pth_sub_load(float task_load, int is_key)
+{
+    int tmp_load = (int)(task_load * 1000);
+
+    __sync_sub_and_fetch(&pth_edfload, tmp_load);
+    if (is_key)
+        __sync_sub_and_fetch(&pth_keyload, tmp_load);
+
 }
 

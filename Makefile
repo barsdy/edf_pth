@@ -88,7 +88,7 @@ TARGET_PREQ = pth_p.h
 TARGET_LIBS = libpth.la 
 TARGET_MANS = $(S)pth-config.1 $(S)pth.3  
 TARGET_TEST = test_std test_mp test_misc test_philo test_sig \
-              test_select test_httpd test_sfio test_uctx 
+              test_select test_httpd test_sfio test_uctx test_edf 
 
 #   object files for library generation
 #   (order is just aesthetically important)
@@ -213,6 +213,8 @@ test_uctx: test_uctx.o test_common.o libpth.la
 	$(LIBTOOL) --mode=link --quiet $(CC) $(LDFLAGS) -o test_uctx test_uctx.o test_common.o libpth.la $(LIBS)
 test_pthread: test_pthread.o test_common.o libpthread.la
 	$(LIBTOOL) --mode=link --quiet $(CC) $(LDFLAGS) -o test_pthread test_pthread.o test_common.o libpthread.la $(LIBS)
+test_edf: test_edf.o libpth.la
+	$(LIBTOOL) --mode=link --quiet $(CC) $(LDFLAGS) -o test_edf test_edf.o test_common.o libpth.la $(LIBS)
 
 #   install the package
 install: all-for-install
@@ -385,6 +387,8 @@ test-uctx: test_uctx
 	./test_uctx
 test-pthread: test_pthread
 	./test_pthread
+test-edf: test_edf
+	./test_edf
 debug: debug-std
 debug-std: test_std
 	TEST=test_std && $(_DEBUG)
@@ -406,6 +410,8 @@ debug-uctx: test_uctx
 	TEST=test_uctx && $(_DEBUG)
 debug-pthread: test_pthread
 	TEST=test_pthread && $(_DEBUG)
+debug-edf: test_edf
+	TEST=test_edf && $(_DEBUG)
 
 #   GNU compat targets
 check: test
@@ -462,3 +468,4 @@ test_sfio.o: test_sfio.c pth.h
 test_uctx.o: test_uctx.c pth.h
 test_sig.o: test_sig.c pth.h
 test_std.o: test_std.c pth.h
+test_edf.o: test_edf.c pth.h

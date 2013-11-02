@@ -1567,9 +1567,9 @@ configure:21977: checking for signal.h
 configure:21982: result: yes
 configure:22131: checking for sigsetjmp
 configure:22188: gcc -o conftest -g  -pipe -Wall -Wshadow -Wpointer-arith -Wcast-align -Winline -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Wno-long-long -fno-strict-aliasing -O0 -pg   -pg conftest.c -lnsl  >&5
-/tmp/ccQJ8iCE.o: In function `main':
+/tmp/ccBZVBHG.o: In function `main':
 /home/murray/my_lib/pth/mix-sched-pth/conftest.c:114: undefined reference to `sigsetjmp'
-/tmp/ccQJ8iCE.o:(.data+0x0): undefined reference to `sigsetjmp'
+/tmp/ccBZVBHG.o:(.data+0x0): undefined reference to `sigsetjmp'
 collect2: ld returned 1 exit status
 configure:22194: $? = 1
 configure: failed program was:
@@ -1747,7 +1747,7 @@ configure:22310: $? = 0
 configure:22322: result: yes
 configure:22234: checking for sigstack
 configure:22291: gcc -o conftest -g  -pipe -Wall -Wshadow -Wpointer-arith -Wcast-align -Winline -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Wno-long-long -fno-strict-aliasing -O0 -pg   -pg conftest.c -lnsl  >&5
-/tmp/ccpDh1au.o: In function `main':
+/tmp/ccatJfRg.o: In function `main':
 /home/murray/my_lib/pth/mix-sched-pth/conftest.c:120: warning: the `sigstack' function is dangerous.  `sigaltstack' should be used instead.
 configure:22297: $? = 0
 configure:22301: test -z 
@@ -1804,11 +1804,11 @@ configure:23732: gcc -o conftest -g  -pipe -Wall -Wshadow -Wpointer-arith -Wcast
 conftest.c:109: warning: no previous prototype for 'handler'
 conftest.c: In function 'main':
 conftest.c:164: warning: 'sigstack' is deprecated (declared at /usr/include/signal.h:365)
-/tmp/cc3ZroeM.o: In function `main':
+/tmp/cc18R5bx.o: In function `main':
 /home/murray/my_lib/pth/mix-sched-pth/conftest.c:164: warning: the `sigstack' function is dangerous.  `sigaltstack' should be used instead.
 configure:23735: $? = 0
 configure:23737: ./conftest
-./configure: line 23738: 11301 Segmentation fault      ./conftest$ac_exeext
+./configure: line 23738:  6578 Segmentation fault      ./conftest$ac_exeext
 configure:23740: $? = 139
 configure: program exited with status 139
 configure: failed program was:

@@ -467,6 +467,10 @@ extern int            pth_abort(pth_t);
 extern int            pth_raise(pth_t, int);
 extern int            pth_join(pth_t, void **);
 extern void           pth_exit(void *);
+extern int            pth_add_load(float, int);
+extern void           pth_sub_load(float, int);
+extern float          pth_get_edfload(void);
+extern float          pth_get_keyload(void);
 
     /* utility functions */
 extern int            pth_fdmode(int, int);
