@@ -47,7 +47,7 @@ struct pth_st {
     pth_time_t     exe_time;             /* required execute time                       */
     pth_time_t     period;               /* period of the task                          */
     pth_time_t     deadline;             /* absolute deadline                           */
-    pth_time_t     remain;               /* remain executing time */
+    pth_time_t     remain;               /* remain executing time                       */
     int            flag;                 /* type of task                                */
     float          task_load;            /* load of rt-task                             */
     /* edf. murray added end */

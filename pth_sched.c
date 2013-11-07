@@ -266,7 +266,6 @@ intern void *pth_scheduler(void *dummy)
 
         /*
          * Find next thread in ready queue
-        pth_pqueue_flash(&pth_RQ, &snapshot);
          */
         pth_current = pth_pqueue_delmax(&pth_RQ, pth_get_edfload());
         if (pth_current == NULL) {
@@ -457,6 +456,7 @@ intern void *pth_scheduler(void *dummy)
                 }
             }
             else {
+                /* do we need to define a barrier which if remain time less to, we consider the task completed. */
                 pth_debug3("pth_scheduler: rt thread [%s] has remain exectime:[%f].", \
                         pth_current->name, pth_time_t2d(&pth_current->remain));
             }
@@ -1017,12 +1017,12 @@ intern int pth_add_load(float task_load, int is_key)
 
 intern float pth_get_edfload(void)
 {
-    return (float)(pth_edfload / 1000);
+    return (float)((float)pth_edfload / 1000.0);
 }
 
 intern float pth_get_keyload(void)
 {
-    return (float)(pth_keyload / 1000);
+    return (float)((float)pth_keyload / 1000.0);
 }
 
 intern void pth_sub_load(float task_load, int is_key)

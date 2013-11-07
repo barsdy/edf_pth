@@ -726,8 +726,8 @@ int pth_mod_main_attr(pth_attr_t attr)
             return pth_error(FALSE, EINVAL);
         }
         pth_main->task_load = tmp_load;
-        pth_debug4("now main thread become C=[%.6f], P=[%.6f], flag=[%d]", \
-                pth_time_t2d(&pth_main->exe_time), pth_time_t2d(&pth_main->period), pth_main->flag);
+        pth_debug5("now main thread become C=[%.6f], P=[%.6f], flag=[%d], taskload:[%f]", \
+                pth_time_t2d(&pth_main->exe_time), pth_time_t2d(&pth_main->period), pth_main->flag, tmp_load);
         /* now leave the pqueue resorting alone, 
          * scheduler will help us to do that. */
     } else { /* mod the prio */

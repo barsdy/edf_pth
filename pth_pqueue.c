@@ -120,20 +120,13 @@ intern int pth_pqueue_maxprio(pth_pqueue_t *q)
 intern void pth_pqueue_flash(pth_pqueue_t *q, pth_time_t *now)
 {
     pth_t   t;
-    pth_time_t offset;
-
-    if (q== NULL || now == NULL)
-        return;
 
     t = q->q_head;
     do {
         if ((t->flag & PTH_TASK_DONE) && \
                 (t->flag & PTH_TASK_HARD)) {
-            /* if deadline - now < period, 
-             * then reset PTH_TASK_DONE */
-            pth_time_set(&offset, &t->deadline);
-            pth_time_sub(&offset, now);
-            if (pth_time_cmp(&offset, &t->period) <= 0) 
+            /* if deadline >= now, then reset PTH_TASK_DONE */
+            if (pth_time_cmp(&t->deadline, now) >= 0) 
                 t->flag &= ~PTH_TASK_DONE;
         }
         t = t->q_next;
@@ -159,13 +152,14 @@ intern pth_t pth_pqueue_delmax(pth_pqueue_t *q, float work_load)
         t->q_prev = NULL;
         q->q_head = NULL;
         q->q_num  = 0;
+        return t;
     }
 
     t = q->q_head;
-    if (work_load > 1) {
+    if (work_load > 1.0) {
         /* reset PTH_TASK_HARD */
         pth_pqueue_flash(q, PTH_TIME_NOW); /* TODO: is it proper that i use pth time api here? */
-        while (!(t->flag & PTH_TASK_HARD)  && (t->flag & PTH_TASK_DONE) \
+        while (!((t->flag & PTH_TASK_HARD) && !(t->flag & PTH_TASK_DONE)) \
                 && t->q_next != q->q_head) 
             t = t->q_next;
 

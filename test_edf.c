@@ -141,7 +141,7 @@ main( )
 retry_main_attr:
     memset(resp_str, 0x00, sizeof(resp_str));
     printf("Input the main attr!\n");
-    printf("Use the default attr(RTTASK|HARDRT|PERTASK)?[y/n]\n");
+    printf("Use the default attr for main?(RTTASK|HARDRT|PERTASK) [y/n]\n");
     scanf("%s", resp_str); /* ignore the input security */
     if (resp_str[0] == 'y') 
         pth_attr_set(main_attr, PTH_ATTR_TYPE, RTTASK|HARDRT|PERTASK);
@@ -150,18 +150,22 @@ retry_main_attr:
     else
         goto retry_main_attr;
 
+    printf("input the main thread time!\n");
+    input_thread_time(main_attr);
+
     if (pth_mod_main_attr(main_attr)) {
         printf("modify main thread attr fail!\n");
         return -1;
     }
 
 retry_task_cnt:
-    printf("how many threads do you wish to spawn:\n");
+    printf("\nHow many threads do you wish to spawn:\n");
     scanf("%d", &task_cnt);
-    if (task_cnt < 0) 
+    if (task_cnt <= 0) 
         goto retry_task_cnt;
 
-    for (cnt=0; cnt<task_cnt; cnt++) {
+    for (cnt=1; cnt<=task_cnt; cnt++) {
+        printf("\nInput task%d attr!\n", cnt);
         if ((new_task = malloc(sizeof(struct edf_tasklist_st))) == NULL) {
             perror("malloc fail!\n");
             return -1;
@@ -196,7 +200,7 @@ retry_task_cnt:
 
     printf("input done. now spawn thread!\n");
     task_walker = task_head;
-    while (task_walker->next != NULL) {
+    while (task_walker != NULL) {
         pth_usleep(task_walker->latency);
 
         if ((task_walker->tid = pth_spawn(task_walker->attr, thread_func, (void *)task_walker->arg)) == NULL) {
@@ -209,12 +213,13 @@ retry_task_cnt:
     printf("spawn done!\n");
 
     task_walker = task_head;
-    while (task_walker->next != NULL) {
+    while (task_walker != NULL) {
         if (pth_join(task_walker->tid, NULL) == FALSE) {
             perror("pth_join fail!\n");
             return -1;
         }
 
+        printf("get a join!\n");
         task_walker = task_walker->next;
     }
     printf("join done!\n");
