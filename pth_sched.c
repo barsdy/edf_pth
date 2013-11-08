@@ -328,7 +328,9 @@ intern void *pth_scheduler(void *dummy)
         /* update scheduler times */
         pth_time_set(&running, &pth_current->lastran);
         pth_time_sub(&running, &snapshot);
+        /*
         pth_time_add(&pth_sched->running, &running);
+        */
         pth_debug2("pth_scheduler: spent in schedule time:[%.6f]", \
                 pth_time_t2d(&running));/* Murray added for debug */
 
@@ -350,10 +352,8 @@ intern void *pth_scheduler(void *dummy)
         pth_time_sub(&running, &pth_current->lastran);
         pth_debug3("pth_scheduler: thread \"%s\" ran %.6f in this time",
                    pth_current->name, pth_time_t2d(&running));
-        pth_time_add(&pth_current->running, &running);
         /*  Murray delete. We only care about running time in this time
-        pth_debug3("pth_scheduler: thread \"%s\" ran %.6f",
-                   pth_current->name, pth_time_t2d(&running));
+        pth_time_add(&pth_current->running, &running);
        */
 
         /*
@@ -433,7 +433,6 @@ intern void *pth_scheduler(void *dummy)
                     pth_debug2("pth_scheduler: reset rt thread [%s] deadline.", pth_current->name);
                     pth_time_set(&pth_current->remain, &pth_current->exe_time); 
                     pth_time_set(&pth_next_period, &pth_current->deadline);
-                    pth_time_add(&pth_current->deadline, &pth_current->period);
                     if (c_deadline > 0) {
                         pth_debug2("pth_scheduler: rt thread now block itself [%.6f].", c_deadline);
                         pth_scheduler_block(pth_next_period);
