@@ -54,8 +54,8 @@ DESTDIR     =
 SHELL       = /bin/sh
 CC          = gcc
 CPPFLAGS    =  -I.
-CFLAGS      = -g  -pipe -Wall -Wshadow -Wpointer-arith -Wcast-align -Winline -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Wno-long-long -fno-strict-aliasing -O0 -pg
-LDFLAGS     =  -pg
+CFLAGS      = -O2 -pipe -funroll-loops -fstrength-reduce -fomit-frame-pointer -ffast-math
+LDFLAGS     = 
 MKFLAGS     = $(MFLAGS) DESTDIR=$(DESTDIR)
 LIBS        = -ldl -lnsl 
 SHTOOL      = $(srcdir)/shtool
@@ -83,7 +83,7 @@ PLATFORM         = i686-pc-linux-gnu
 PTH_MCTX_ID      = mcsc/sc/mc
 PTH_STACK_GROWTH = down
 
-TARGET_ALL  = $(TARGET_PREQ) $(TARGET_LIBS) $(TARGET_MANS) $(TARGET_TEST)
+TARGET_ALL  = $(TARGET_PREQ) $(TARGET_LIBS) $(TARGET_TEST)
 TARGET_PREQ = pth_p.h
 TARGET_LIBS = libpth.la 
 TARGET_MANS = $(S)pth-config.1 $(S)pth.3  

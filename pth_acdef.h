@@ -259,7 +259,7 @@
 #define PACKAGE_VERSION ""
 
 /* define to enable Pth debugging */
-#define PTH_DEBUG 1
+/* #undef PTH_DEBUG */
 
 /* define if using Dmalloc in GNU pth */
 /* #undef PTH_DMALLOC */
