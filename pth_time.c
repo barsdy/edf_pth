@@ -36,6 +36,16 @@
         (((t1).tv_sec == (t2).tv_sec) && ((t1).tv_usec == (t2).tv_usec))
 #endif /* cpp */
 
+/* murray added begin */
+struct pth_tsc {
+    unsigned int hi;
+    unsigned int lo;
+};
+typedef struct tsc_time pth_tsc_t;
+
+intern pth_tsc_t pth_tsc_zero = {0, 0};
+/* murray added end */
+
 /* a global variable holding a zero time */
 intern pth_time_t pth_time_zero = { 0L, 0L };
 
@@ -60,6 +70,74 @@ intern void pth_time_usleep(unsigned long usec)
 #else
 #define __gettimeofday(t) gettimeofday(t, NULL)
 #endif
+
+/* murray added begin */
+#define pth_tsc_set(c1,c2) \
+    do { \
+        if ((c2) == PTH_TIME_NOW) \
+            __asm__ __volatile__("rdtsc":"=a"(c2->lo), "=d"(c2->hi)) \
+        else { \
+            (c1)->lo  = (c2)->lo; \
+            (c1)->hi = (c2)->hi; \
+        } \
+    } while (0)
+
+
+/* calculate c1 <=> c2 */
+intern int pth_tsc_cmp(pth_tsc_t *c1, pth_tsc_t *c2)
+{
+    int rc;
+
+    rc = c1->hi - c2->hi;
+    
+    return (rc == 0)?rc:(c1->low - c2->low);
+}
+
+/* calculate c1 = c1 - c2 */
+#define pth_tsc_sub(c1,c2) \
+    do { \
+        (c1)->hi -= (c2)->hi; \
+        if ((c1)->lo < (c2)->lo) { \
+            (c1)->hi--; \
+            (c1)->lo = ~((c2)->lo) + (c1)->lo + 1; \
+        } \
+        else \
+            (c1)->lo -= (c2)->lo; \
+    } while (0)
+
+/* my CPU frequency is 2GHZ */
+#define PTH_TSC_SEC_OFFSET  31
+
+
+/* convert a tsc difference into a time struct */
+intern void pth_time_c2t(pth_tsc_t *diff, struct timeval *t)
+{
+    t->tv_sec = ((diff->hi)<<1) + ((diff->lo)>>PTH_TSC_SEC_OFFSET);
+    t->tv_usec = (((diff->lo) & 0x7FFFFFFF)>>1) / 1000;/* or can we just >>10? */
+}
+
+
+/* convert a time struct into a tsc difference */
+intern void pth_Time_t2c(struct timeval *t, pth_tsc_t *diff)
+{
+    diff->lo = t->tv_usec*2000; /* *1000->nanosec, *2->tsc count, or can we just <<11? */
+    if (t->tv_sec & 0x01)
+        diff->lo |= 0x80000000;
+    diff->hi = t->tv_sec>>1;
+}
+
+
+/* calculate the time that from c(tsc count) to now */
+intern void pth_tsc_passingtime(pth_tsc_t *c, struct timeval *t)
+{
+    pth_tsc_t nowc = pth_tsc_zero;
+
+    pth_tsc_set(&nowc, PTH_TIME_NOW);
+    pth_tsc_sub(&nowc, c);
+    pth_tsc_c2t(&nowc, t);
+}
+/* murray added end */
+
 #define pth_time_set(t1,t2) \
     do { \
         if ((t2) == PTH_TIME_NOW) \
@@ -69,7 +147,10 @@ intern void pth_time_usleep(unsigned long usec)
             (t1)->tv_usec = (t2)->tv_usec; \
         } \
     } while (0)
+#if 0
+#endif
 #endif /* cpp */
+
 
 /* time value constructor */
 pth_time_t pth_time(long sec, long usec)

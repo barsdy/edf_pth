@@ -45,7 +45,7 @@ static sigset_t     pth_sigcatch;   /* mask of signals we have to catch      */
 static sigset_t     pth_sigraised;  /* mask of raised signals                */
 
 static pth_time_t   pth_loadticknext;
-static pth_time_t   pth_tick_sched_time;    /* murray added */
+static pth_time_t    pth_tick_sched_time;    /* murray added */
 
 static int          pth_ticks;          /* murray added. */
 static int          pth_sched_working;  /* murray added. flag the scheduler is working now */
@@ -76,11 +76,15 @@ intern int pth_scheduler_init(void)
     pth_pqueue_init(&pth_DQ);
 
     /* initialize scheduling hints */
+#if 0 murray deleted
     pth_favournew = 1; /* the default is the original behaviour */
+#endif
 
     /* initialize load support */
+    /* murray deleted
     pth_loadval = 1.0;
     pth_time_set(&pth_loadticknext, PTH_TIME_NOW);
+    */
 
     return TRUE;
 }
@@ -144,6 +148,7 @@ intern void pth_scheduler_kill(void)
  * The actual average load is calculated through an exponential average
  * formula.
  */
+#if 0
 #define pth_scheduler_load(now) \
     if (pth_time_cmp((now), &pth_loadticknext) >= 0) { \
         pth_time_t ttmp; \
@@ -157,37 +162,38 @@ intern void pth_scheduler_kill(void)
         pth_time_set(&pth_loadticknext, (now)); \
         pth_time_add(&pth_loadticknext, &pth_loadtickgap); \
     }
+#endif
 
 /* Murray added begin */ 
 /* pth tick schedule */
 #define CHECK   -1
 
+/* 
+ * pth tick scheduler is used for:
+ * 1. run eventmanager to check event;
+ * 2. decide whether swith to scheduler or not.
+ */
 intern void pth_tick_scheduler(int sig)
 {
-    /*  
-    pth_time_t intval;
-
-    pth_time_set(&intval, PTH_TIME_NOW);
-    pth_time_sub(&intval, &pth_tick_sched_time);
-    pth_debug2("murray get into pth_tick_schedule! the interval is [%.6f]\n", \
-            pth_time_t2d(&intval));
-    */
-
     if (pth_sched_working == 1) 
         return;
 
     __sync_fetch_and_sub(&pth_ticks, 1);
+    /* Only in tick scheduler can eventmanager have chance to check event,
+     * so pth_ticks will be checked later, eventmanager go frist.*/
+
+    pth_time_set(&pth_tick_sched_time, PTH_TIME_NOW);
+    if ((pth_pqueue_elements(&pth_WQ) && (pth_sched_eventmanager(&pth_tick_sched_time, CHECK) == TRUE)) || \
+            (pth_pqueue_elements(&pth_NQ) && (pth_time_cmp(&(pth_NQ.q_head->deadline), &(pth_current->deadline)) < 0))) {
+        pth_debug1("murray tick scheduler is switched to scheduler!\n");
+        pth_mctx_switch(&pth_current->mctx, &pth_sched->mctx);
+    }
+
     if (pth_ticks == 0) {
         pth_debug1("murray tick scheduler switch to scheduler!\n");
         pth_mctx_switch(&pth_current->mctx, &pth_sched->mctx);
     }
 
-    pth_time_set(&pth_tick_sched_time, PTH_TIME_NOW);
-    if ((pth_pqueue_elements(&pth_NQ) && (pth_time_cmp(&(pth_NQ.q_head->deadline), &(pth_current->deadline)) < 0)) || \
-            (pth_pqueue_elements(&pth_WQ) && (pth_sched_eventmanager(&pth_tick_sched_time, CHECK) == TRUE))) { 
-        pth_debug1("murray tick scheduler is switched to scheduler!\n");
-        pth_mctx_switch(&pth_current->mctx, &pth_sched->mctx);
-    }
 }
 
 intern void pth_scheduler_block(pth_time_t until)
@@ -212,7 +218,7 @@ intern void *pth_scheduler(void *dummy)
 {
     sigset_t sigs;
     pth_time_t running;
-    pth_time_t snapshot;
+    pth_time_t  snapshot;
     pth_time_t pth_next_period;
     long   remain_time;
     double c_deadline;
@@ -237,7 +243,6 @@ intern void *pth_scheduler(void *dummy)
 
     /* initialize the snapshot time for bootstrapping the loop */
     pth_time_set(&snapshot, PTH_TIME_NOW);
-    pth_time_set(&pth_tick_sched_time, PTH_TIME_NOW); /* Murray added for debug */
 
     /*
      * endless scheduler loop
@@ -322,20 +327,19 @@ intern void *pth_scheduler(void *dummy)
         pth_ticks = (remain_time % PTH_INTERVAL > 0)?pth_ticks+1:pth_ticks;
         pth_debug2("pth_scheduler: the pth_ticks = [%d]", pth_ticks);
 
+#ifdef RT_PTH_DEBUG
         /* update thread times */
         pth_time_set(&pth_current->lastran, PTH_TIME_NOW);
 
         /* update scheduler times */
         pth_time_set(&running, &pth_current->lastran);
         pth_time_sub(&running, &snapshot);
-        /*
-        pth_time_add(&pth_sched->running, &running);
-        */
+        pth_current->dispatches++;
+#endif
         pth_debug2("pth_scheduler: spent in schedule time:[%.6f]", \
                 pth_time_t2d(&running));/* Murray added for debug */
 
         /* ** ENTERING THREAD ** - by switching the machine context */
-        pth_current->dispatches++;
         __sync_fetch_and_and(&pth_sched_working, 0); /* set pth_sched_working to 0 */
         pth_mctx_switch(&pth_sched->mctx, &pth_current->mctx);
 
@@ -345,11 +349,13 @@ intern void *pth_scheduler(void *dummy)
         pth_debug3("pth_scheduler: cameback from thread 0x%lx (\"%s\")",
                    (unsigned long)pth_current, pth_current->name);
 
+#ifdef RT_PTH_DEBUG
         /*
          * Calculate and update the time the previous thread was running
          */
         pth_time_set(&running, &snapshot);
         pth_time_sub(&running, &pth_current->lastran);
+#endif
         pth_debug3("pth_scheduler: thread \"%s\" ran %.6f in this time",
                    pth_current->name, pth_time_t2d(&running));
         /*  Murray delete. We only care about running time in this time
@@ -989,6 +995,7 @@ intern void pth_sched_eventmanager_sighandler(int sig)
 {
     char c;
 
+    printf("murray tmp debug!\n");
     /* remember raised signal */
     sigaddset(&pth_sigraised, sig);
 
